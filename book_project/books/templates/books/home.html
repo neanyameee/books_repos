@@ -1,0 +1,12 @@
+{% extends 'books/base.html' %}
+
+{% block content %}
+<h1>Менеджер книг</h1>
+<p>Простое приложение для управления книгами</p>
+<ul>
+    <li><a href="/books/">Список книг</a></li>
+    <li><a href="/books/add/">Добавить книгу</a></li>
+    <li><a href="/export/">Экспорт в JSON/XML</a></li>
+    <li><a href="/upload/">Импорт из JSON/XML</a></li>
+</ul>
+{% endblock %}

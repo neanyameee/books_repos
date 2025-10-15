@@ -1,0 +1,20 @@
+{% extends 'books/base.html' %}
+
+{% block content %}
+<h1>Список книг</h1>
+
+{% if books %}
+    {% for book in books %}
+    <div class="book">
+        <h3>{{ book.title }}</h3>
+        <p><strong>Автор:</strong> {{ book.author }}</p>
+        <p><strong>ISBN:</strong> {{ book.isbn }}</p>
+        <p><strong>Год:</strong> {{ book.publication_year }}</p>
+    </div>
+    {% endfor %}
+{% else %}
+    <p>Книг нет. <a href="/books/add/">Добавить первую книгу</a></p>
+{% endif %}
+
+<a href="/books/add/">Добавить книгу</a>
+{% endblock %}

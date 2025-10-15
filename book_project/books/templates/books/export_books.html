@@ -1,0 +1,16 @@
+{% extends 'books/base.html' %}
+
+{% block content %}
+<h1>Экспорт книг</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <p>Формат:</p>
+    <input type="radio" name="file_type" value="json" checked> JSON
+    <input type="radio" name="file_type" value="xml"> XML
+    <br><br>
+    <button type="submit">Экспортировать</button>
+</form>
+
+<a href="/books/">Назад к списку</a>
+{% endblock %}
