@@ -40,11 +40,16 @@ def home(request):
     if request.method == 'POST' and 'export' in request.POST:
         books = list(Book.objects.values())
         if books:
-            filename = f"books_{uuid.uuid4().hex[:8]}.json"
+            # всегда используется одно имя файла
+            filename = "books_export.json"
             filepath = os.path.join(files_dir, filename)
+
             with open(filepath, 'w') as f:
                 json.dump(books, f, indent=2)
-            messages.success(request, f'Экспортировано {len(books)} книг')
+
+            messages.success(request, f'Экспортировано {len(books)} книг в файл {filename}')
+        else:
+            messages.warning(request, 'Нет книг для экспорта')
         return redirect('home')
 
     # Загрузка JSON
