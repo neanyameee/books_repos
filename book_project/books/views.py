@@ -9,6 +9,23 @@ def home(request):
     files_dir = os.path.join(settings.MEDIA_ROOT, 'json_files')
     os.makedirs(files_dir, exist_ok=True)
 
+    if request.method == 'POST' and 'reset_all' in request.POST:
+        # Удаляем все книги из базы данных
+        book_count = Book.objects.count()
+        Book.objects.all().delete()
+
+        # Удаляем все JSON файлы
+        files_dir = os.path.join(settings.MEDIA_ROOT, 'json_files')
+        file_count = 0
+        if os.path.exists(files_dir):
+            for filename in os.listdir(files_dir):
+                if filename.endswith('.json'):
+                    os.remove(os.path.join(files_dir, filename))
+                    file_count += 1
+
+        messages.success(request, f'Удалено {book_count} книг и {file_count} файлов')
+        return redirect('home')
+
     # Добавление книги
     if request.method == 'POST' and 'title' in request.POST:
         title = request.POST['title']
@@ -90,20 +107,6 @@ def home(request):
         'books': Book.objects.all(),
         'json_files': json_files,
     })
-
-    if request.method == 'POST' and 'reset' in request.POST:
-        # Удаляем все книги
-        Book.objects.all().delete()
-
-        # Удаляем все JSON файлы
-        files_dir = os.path.join(settings.MEDIA_ROOT, 'json_files')
-        if os.path.exists(files_dir):
-            for f in os.listdir(files_dir):
-                if f.endswith('.json'):
-                    os.remove(os.path.join(files_dir, f))
-
-        messages.success(request, 'Все данные сброшены')
-        return redirect('home')
 
 
 def view_json_file(request, filename):
