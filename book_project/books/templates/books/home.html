@@ -15,6 +15,13 @@
     {% endif %}
 
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+   <h3>Управление данными</h3>
+    <form method="post" onsubmit="return confirm('ВНИМАНИЕ! Это удалит ВСЕ книги и ВСЕ JSON файлы. Продолжить?')">
+        {% csrf_token %}
+        <button type="submit" name="reset_all" style="width: 100%; padding: 8px; background: #dc3545; color: white;">
+            Сбросить ВСЕ данные
+        </button>
+    </form>
 
         <!-- Добавить книгу -->
         <div>
@@ -42,14 +49,6 @@
                 <button type="submit" style="width: 100%; padding: 8px;">Загрузить</button>
             </form>
         </div>
-
-        <h3>Управление данными</h3>
-    <form method="post" onsubmit="return confirm('ВНИМАНИЕ! Это удалит ВСЕ книги и ВСЕ JSON файлы. Продолжить?')">
-        {% csrf_token %}
-        <button type="submit" name="reset_all" style="width: 100%; padding: 8px; background: #dc3545; color: white;">
-            Сбросить ВСЕ данные
-        </button>
-    </form>
 
         <!-- Список книг -->
         <div>
