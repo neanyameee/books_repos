@@ -24,7 +24,6 @@
                 <input type="text" name="title" placeholder="Название" required style="width: 100%; margin: 5px 0; padding: 5px;"><br>
                 <input type="text" name="author" placeholder="Автор" required style="width: 100%; margin: 5px 0; padding: 5px;"><br>
                 <input type="number" name="year" placeholder="Год" required style="width: 100%; margin: 5px 0; padding: 5px;"><br>
-                <input type="text" name="isbn" placeholder="ISBN (13 цифр)" required style="width: 100%; margin: 5px 0; padding: 5px;"><br>
                 <button type="submit" style="width: 100%; padding: 8px;">Добавить</button>
             </form>
 
@@ -52,7 +51,6 @@
                     <div style="border-bottom: 1px solid #eee; padding: 5px 0;">
                         <strong>{{ book.title }}</strong><br>
                         {{ book.author }} ({{ book.year }})
-                        <br>ISBN: {{book.isbn}}<br>
                     </div>
                 {% endfor %}
             {% else %}
