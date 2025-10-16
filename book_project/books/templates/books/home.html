@@ -16,13 +16,6 @@
 
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
 
-        <form method="post" onsubmit="return confirm('ВНИМАНИЕ! Это удалит ВСЕ книги и ВСЕ JSON файлы. Продолжить?')">
-        {% csrf_token %}
-        <button type="submit" name="reset_all" style="width: 100%; padding: 8px; background: #dc3545; color: white;">
-            Сбросить ВСЕ данные
-        </button>
-    </form>
-
         <!-- Добавить книгу -->
         <div>
             <h3>Добавить книгу</h3>
@@ -79,6 +72,13 @@
                 <p>Файлов нет</p>
             {% endif %}
         </div>
+
+        <form method="post" onsubmit="return confirm('ВНИМАНИЕ! Это удалит ВСЕ книги и ВСЕ JSON файлы. Продолжить?')">
+        {% csrf_token %}
+        <button type="submit" name="reset_all" style="width: 100%; padding: 8px; background: #dc3545; color: white;">
+            Сбросить ВСЕ данные
+        </button>
+        </form>
 
     </div>
 </body>
