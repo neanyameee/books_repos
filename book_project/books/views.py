@@ -33,9 +33,8 @@ def home(request):
         title = request.POST['title']
         author = request.POST['author']
         year = request.POST['year']
-        isbn = request.POST['isbn']
         if title and author and year and isbn:
-            Book.objects.create(title=title, author=author, year=year, isbn=isbn)
+            Book.objects.create(title=title, author=author, year=year)
             messages.success(request, 'Книга добавлена')
         return redirect('home')
 
