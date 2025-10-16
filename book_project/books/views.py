@@ -79,12 +79,11 @@ def home(request):
             if isinstance(data, list):
                 imported = 0
                 for item in data:
-                    if all(k in item for k in ['title', 'author', 'year', 'isbn']):
+                    if all(k in item for k in ['title', 'author', 'year']):
                         Book.objects.get_or_create(
                             title=item['title'],
                             author=item['author'],
-                            year=item['year'],
-                            isbn=item['isbn']
+                            year=item['year']
                         )
                         imported += 1
                 messages.success(request, f'Импортировано {imported} книг')
