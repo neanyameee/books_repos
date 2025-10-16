@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
 from django.contrib import messages
 from .models import Book
 import json, os, uuid
@@ -7,48 +6,34 @@ from django.conf import settings
 
 
 def home(request):
-    """Главная страница со всеми функциями"""
-
-    # Создаем папку для файлов
     files_dir = os.path.join(settings.MEDIA_ROOT, 'json_files')
     os.makedirs(files_dir, exist_ok=True)
 
-    # Обработка добавления книги через форму
-    if request.method == 'POST' and 'add_book' in request.POST:
-        title = request.POST.get('title', '').strip()
-        author = request.POST.get('author', '').strip()
-        year = request.POST.get('year', '').strip()
-
+    # Добавление книги
+    if request.method == 'POST' and 'title' in request.POST:
+        title = request.POST['title']
+        author = request.POST['author']
+        year = request.POST['year']
         if title and author and year:
-            try:
-                Book.objects.create(title=title, author=author, year=int(year))
-                messages.success(request, 'Книга добавлена!')
-            except:
-                messages.error(request, 'Ошибка! Проверьте данные.')
-        else:
-            messages.error(request, 'Заполните все поля!')
+            Book.objects.create(title=title, author=author, year=year)
+            messages.success(request, 'Книга добавлена')
         return redirect('home')
 
-    # Обработка экспорта в JSON
-    if request.method == 'POST' and 'export_json' in request.POST:
+    # Экспорт в JSON
+    if request.method == 'POST' and 'export' in request.POST:
         books = list(Book.objects.values())
         if books:
             filename = f"books_{uuid.uuid4().hex[:8]}.json"
             filepath = os.path.join(files_dir, filename)
-
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(books, f, ensure_ascii=False, indent=2)
-
-            messages.success(request, f'Экспортировано {len(books)} книг в {filename}')
-        else:
-            messages.warning(request, 'Нет книг для экспорта!')
+            with open(filepath, 'w') as f:
+                json.dump(books, f, indent=2)
+            messages.success(request, f'Экспортировано {len(books)} книг')
         return redirect('home')
 
-    # Обработка загрузки JSON файла
-    if request.method == 'POST' and 'upload_json' in request.POST:
-        file = request.FILES.get('json_file')
-        if file and file.name.endswith('.json'):
-            # Генерируем безопасное имя
+    # Загрузка JSON
+    if request.method == 'POST' and 'json_file' in request.FILES:
+        file = request.FILES['json_file']
+        if file.name.endswith('.json'):
             filename = f"{uuid.uuid4().hex}.json"
             filepath = os.path.join(files_dir, filename)
 
@@ -58,8 +43,8 @@ def home(request):
                     for chunk in file.chunks():
                         f.write(chunk)
 
-                # Валидация JSON
-                with open(filepath, 'r', encoding='utf-8') as f:
+                # Валидируем и импортируем
+                with open(filepath, 'r') as f:
                     data = json.load(f)
 
                 if isinstance(data, list):
@@ -72,23 +57,20 @@ def home(request):
                                 year=item['year']
                             )
                             imported += 1
-
-                    messages.success(request, f'Импортировано {imported} книг!')
+                    messages.success(request, f'Импортировано {imported} книг')
                 else:
                     os.remove(filepath)
-                    messages.error(request, 'JSON должен содержать массив объектов!')
+                    messages.error(request, 'Файл должен содержать массив')
 
             except json.JSONDecodeError:
                 os.remove(filepath)
-                messages.error(request, 'Невалидный JSON файл!')
+                messages.error(request, 'Неверный формат JSON')
             except Exception as e:
                 os.remove(filepath)
                 messages.error(request, f'Ошибка: {str(e)}')
-        else:
-            messages.error(request, 'Выберите JSON файл!')
         return redirect('home')
 
-    # Получаем список существующих JSON файлов
+    # Список JSON файлов
     json_files = []
     if os.path.exists(files_dir):
         for f in os.listdir(files_dir):
@@ -97,37 +79,27 @@ def home(request):
                 json_files.append({
                     'name': f,
                     'size': os.path.getsize(filepath),
-                    'path': filepath
                 })
 
-    context = {
+    return render(request, 'books/home.html', {
         'books': Book.objects.all(),
         'json_files': json_files,
-        'has_books': Book.objects.exists(),
-        'has_files': len(json_files) > 0
-    }
-    return render(request, 'books/home.html', context)
+    })
 
 
 def view_json_file(request, filename):
-    """Просмотр содержимого JSON файла"""
     filepath = os.path.join(settings.MEDIA_ROOT, 'json_files', filename)
 
     if os.path.exists(filepath):
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                content = f.read()
-            data = json.loads(content)
-            pretty_content = json.dumps(data, ensure_ascii=False, indent=2)
+        with open(filepath, 'r') as f:
+            content = f.read()
+        data = json.loads(content)
+        pretty_content = json.dumps(data, indent=2)
 
-            return render(request, 'books/view_json.html', {
-                'filename': filename,
-                'content': pretty_content,
-                'book_count': len(data) if isinstance(data, list) else 1
-            })
-        except:
-            messages.error(request, 'Ошибка чтения файла!')
-    else:
-        messages.error(request, 'Файл не найден!')
+        return render(request, 'books/view_json.html', {
+            'filename': filename,
+            'content': pretty_content,
+        })
 
+    messages.error(request, 'Файл не найден')
     return redirect('home')
