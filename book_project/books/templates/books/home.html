@@ -61,7 +61,7 @@
         <!-- JSON файлы -->
         <div>
             <h3>JSON файлы ({{ json_files|length }})</h3>
-            {% if json_files %}
+            {% if json_files %} <!-- Проверка если файлы существуют-->
                 {% for file in json_files %}
                     <div style="border-bottom: 1px solid #eee; padding: 5px 0;">
                         <a href="{% url 'view_json' file.name %}">{{ file.name }}</a><br>

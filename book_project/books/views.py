@@ -33,52 +33,57 @@ def home(request):
     # Загрузка JSON
     if request.method == 'POST' and 'json_file' in request.FILES:
         file = request.FILES['json_file']
-        if file.name.endswith('.json'):
-            filename = f"{uuid.uuid4().hex}.json"
-            filepath = os.path.join(files_dir, filename)
 
-            try:
-                # Сохраняем файл
-                with open(filepath, 'wb+') as f:
-                    for chunk in file.chunks():
-                        f.write(chunk)
+        # Проверяем что файл JSON
+        if not file.name.lower().endswith('.json'):
+            messages.error(request, 'Ошибка: файл должен быть в формате JSON')
+            return redirect('home')
 
-                # Валидируем и импортируем
-                with open(filepath, 'r') as f:
-                    data = json.load(f)
+        filename = f"{uuid.uuid4().hex}.json"
+        filepath = os.path.join(files_dir, filename)
 
-                if isinstance(data, list):
-                    imported = 0
-                    for item in data:
-                        if all(k in item for k in ['title', 'author', 'year']):
-                            Book.objects.get_or_create(
-                                title=item['title'],
-                                author=item['author'],
-                                year=item['year']
-                            )
-                            imported += 1
-                    messages.success(request, f'Импортировано {imported} книг')
-                else:
-                    os.remove(filepath)
-                    messages.error(request, 'Файл должен содержать массив')
+        try:
+            # Сохраняем файл
+            with open(filepath, 'wb+') as f:
+                for chunk in file.chunks():
+                    f.write(chunk)
 
-            except json.JSONDecodeError:
+            # Валидируем и импортируем
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+
+            if isinstance(data, list):
+                imported = 0
+                for item in data:
+                    if all(k in item for k in ['title', 'author', 'year']):
+                        Book.objects.get_or_create(
+                            title=item['title'],
+                            author=item['author'],
+                            year=item['year']
+                        )
+                        imported += 1
+                messages.success(request, f'Импортировано {imported} книг')
+            else:
                 os.remove(filepath)
-                messages.error(request, 'Неверный формат JSON')
-            except Exception as e:
-                os.remove(filepath)
-                messages.error(request, f'Ошибка: {str(e)}')
+                messages.error(request, 'Файл должен содержать массив книг')
+
+        except json.JSONDecodeError:
+            os.remove(filepath)
+            messages.error(request, 'Ошибка: неверный формат JSON файла')
+        except Exception as e:
+            os.remove(filepath)
+            messages.error(request, f'Ошибка: {str(e)}')
         return redirect('home')
 
     # Список JSON файлов
     json_files = []
-    if os.path.exists(files_dir):
+    if os.path.exists(files_dir):  # Проверка существования папки
         for f in os.listdir(files_dir):
-            if f.endswith('.json'):
+            if f.endswith('.json'):  # Фильтрация только JSON файлов
                 filepath = os.path.join(files_dir, f)
                 json_files.append({
                     'name': f,
-                    'size': os.path.getsize(filepath),
+                    'size': os.path.getsize(filepath),  # Чтение информации о файле
                 })
 
     return render(request, 'books/home.html', {
@@ -90,16 +95,16 @@ def home(request):
 def view_json_file(request, filename):
     filepath = os.path.join(settings.MEDIA_ROOT, 'json_files', filename)
 
-    if os.path.exists(filepath):
+    if os.path.exists(filepath):  # Проверка существования файла
         with open(filepath, 'r') as f:
-            content = f.read()
+            content = f.read()  # Чтение содержимого
         data = json.loads(content)
-        pretty_content = json.dumps(data, indent=2)
+        pretty_content = json.dumps(data, indent=2)  # Форматирование
 
         return render(request, 'books/view_json.html', {
             'filename': filename,
-            'content': pretty_content,
+            'content': pretty_content,  # Передача содержимого в шаблон
         })
 
-    messages.error(request, 'Файл не найден')
+    messages.error(request, 'Файл не найден')  # Сообщение если файл не существует
     return redirect('home')
