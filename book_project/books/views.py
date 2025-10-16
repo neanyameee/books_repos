@@ -9,6 +9,7 @@ def home(request):
     files_dir = os.path.join(settings.MEDIA_ROOT, 'json_files')
     os.makedirs(files_dir, exist_ok=True)
 
+    # Обработка сброса данных
     if request.method == 'POST' and 'reset_all' in request.POST:
         # Удаляем все книги из базы данных
         book_count = Book.objects.count()
@@ -26,13 +27,15 @@ def home(request):
         messages.success(request, f'Удалено {book_count} книг и {file_count} файлов')
         return redirect('home')
 
+
     # Добавление книги
     if request.method == 'POST' and 'title' in request.POST:
         title = request.POST['title']
         author = request.POST['author']
         year = request.POST['year']
-        if title and author and year:
-            Book.objects.create(title=title, author=author, year=year)
+        isbn = request.POST['isbn']
+        if title and author and year and isbn:
+            Book.objects.create(title=title, author=author, year=year, isbn=isbn)
             messages.success(request, 'Книга добавлена')
         return redirect('home')
 
@@ -77,11 +80,12 @@ def home(request):
             if isinstance(data, list):
                 imported = 0
                 for item in data:
-                    if all(k in item for k in ['title', 'author', 'year']):
+                    if all(k in item for k in ['title', 'author', 'year', 'isbn']):
                         Book.objects.get_or_create(
                             title=item['title'],
                             author=item['author'],
-                            year=item['year']
+                            year=item['year'],
+                            isbn=item['isbn']
                         )
                         imported += 1
                 messages.success(request, f'Импортировано {imported} книг')
