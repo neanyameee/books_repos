@@ -91,6 +91,20 @@ def home(request):
         'json_files': json_files,
     })
 
+    if request.method == 'POST' and 'reset' in request.POST:
+        # Удаляем все книги
+        Book.objects.all().delete()
+
+        # Удаляем все JSON файлы
+        files_dir = os.path.join(settings.MEDIA_ROOT, 'json_files')
+        if os.path.exists(files_dir):
+            for f in os.listdir(files_dir):
+                if f.endswith('.json'):
+                    os.remove(os.path.join(files_dir, f))
+
+        messages.success(request, 'Все данные сброшены')
+        return redirect('home')
+
 
 def view_json_file(request, filename):
     filepath = os.path.join(settings.MEDIA_ROOT, 'json_files', filename)
