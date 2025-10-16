@@ -1,101 +1,133 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
+from django.contrib import messages
+from .models import Book
+import json, os, uuid
 from django.conf import settings
-import os
-import uuid
-
-from .models import Book, ImportedFile
-from .forms import BookForm, FileUploadForm
-from .utils import export_to_json, export_to_xml, import_from_json, import_from_xml
 
 
 def home(request):
-    return render(request, 'books/home.html')
+    """Главная страница со всеми функциями"""
 
+    # Создаем папку для файлов
+    files_dir = os.path.join(settings.MEDIA_ROOT, 'json_files')
+    os.makedirs(files_dir, exist_ok=True)
 
-def book_list(request):
-    books = Book.objects.all()
-    return render(request, 'books/book_list.html', {'books': books})
+    # Обработка добавления книги через форму
+    if request.method == 'POST' and 'add_book' in request.POST:
+        title = request.POST.get('title', '').strip()
+        author = request.POST.get('author', '').strip()
+        year = request.POST.get('year', '').strip()
 
+        if title and author and year:
+            try:
+                Book.objects.create(title=title, author=author, year=int(year))
+                messages.success(request, 'Книга добавлена!')
+            except:
+                messages.error(request, 'Ошибка! Проверьте данные.')
+        else:
+            messages.error(request, 'Заполните все поля!')
+        return redirect('home')
 
-def add_book(request):
-    if request.method == 'POST':
-        form = BookForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('book_list')
-    else:
-        form = BookForm()
+    # Обработка экспорта в JSON
+    if request.method == 'POST' and 'export_json' in request.POST:
+        books = list(Book.objects.values())
+        if books:
+            filename = f"books_{uuid.uuid4().hex[:8]}.json"
+            filepath = os.path.join(files_dir, filename)
 
-    return render(request, 'books/add_book.html', {'form': form})
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(books, f, ensure_ascii=False, indent=2)
 
+            messages.success(request, f'Экспортировано {len(books)} книг в {filename}')
+        else:
+            messages.warning(request, 'Нет книг для экспорта!')
+        return redirect('home')
 
-def export_books(request):
-    if request.method == 'POST':
-        file_type = request.POST.get('file_type')
-        books = Book.objects.all()
-
-        if not books.exists():
-            return redirect('book_list')
-
-        filename = f"books_export.{file_type}"
-        file_path = os.path.join(settings.MEDIA_ROOT, filename)
-
-        os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
-
-        if file_type == 'json':
-            export_to_json(books, file_path)
-        elif file_type == 'xml':
-            export_to_xml(books, file_path)
-
-        with open(file_path, 'rb') as f:
-            response = HttpResponse(f.read(), content_type='application/octet-stream')
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
-        os.remove(file_path)
-        return response
-
-    return render(request, 'books/export_books.html')
-
-
-def upload_file(request):
-    if request.method == 'POST':
-        form = FileUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            uploaded_file = request.FILES['file']
-            file_type = form.cleaned_data['file_type']
-
-            filename = f"{uuid.uuid4()}.{file_type}"
-            file_path = os.path.join(settings.MEDIA_ROOT, filename)
-
-            os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
-
-            with open(file_path, 'wb+') as destination:
-                for chunk in uploaded_file.chunks():
-                    destination.write(chunk)
+    # Обработка загрузки JSON файла
+    if request.method == 'POST' and 'upload_json' in request.POST:
+        file = request.FILES.get('json_file')
+        if file and file.name.endswith('.json'):
+            # Генерируем безопасное имя
+            filename = f"{uuid.uuid4().hex}.json"
+            filepath = os.path.join(files_dir, filename)
 
             try:
-                if file_type == 'json':
-                    imported_count = import_from_json(file_path)
-                elif file_type == 'xml':
-                    imported_count = import_from_xml(file_path)
+                # Сохраняем файл
+                with open(filepath, 'wb+') as f:
+                    for chunk in file.chunks():
+                        f.write(chunk)
 
-                ImportedFile.objects.create(
-                    original_filename=uploaded_file.name,
-                    stored_filename=filename,
-                    file_type=file_type
-                )
+                # Валидация JSON
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
 
-                return redirect('book_list')
+                if isinstance(data, list):
+                    imported = 0
+                    for item in data:
+                        if all(k in item for k in ['title', 'author', 'year']):
+                            Book.objects.get_or_create(
+                                title=item['title'],
+                                author=item['author'],
+                                year=item['year']
+                            )
+                            imported += 1
 
+                    messages.success(request, f'Импортировано {imported} книг!')
+                else:
+                    os.remove(filepath)
+                    messages.error(request, 'JSON должен содержать массив объектов!')
+
+            except json.JSONDecodeError:
+                os.remove(filepath)
+                messages.error(request, 'Невалидный JSON файл!')
             except Exception as e:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                return render(request, 'books/upload_file.html', {
-                    'form': form,
-                    'error': f'Ошибка: {str(e)}'
-                })
-    else:
-        form = FileUploadForm()
+                os.remove(filepath)
+                messages.error(request, f'Ошибка: {str(e)}')
+        else:
+            messages.error(request, 'Выберите JSON файл!')
+        return redirect('home')
 
-    return render(request, 'books/upload_file.html', {'form': form})
+    # Получаем список существующих JSON файлов
+    json_files = []
+    if os.path.exists(files_dir):
+        for f in os.listdir(files_dir):
+            if f.endswith('.json'):
+                filepath = os.path.join(files_dir, f)
+                json_files.append({
+                    'name': f,
+                    'size': os.path.getsize(filepath),
+                    'path': filepath
+                })
+
+    context = {
+        'books': Book.objects.all(),
+        'json_files': json_files,
+        'has_books': Book.objects.exists(),
+        'has_files': len(json_files) > 0
+    }
+    return render(request, 'books/home.html', context)
+
+
+def view_json_file(request, filename):
+    """Просмотр содержимого JSON файла"""
+    filepath = os.path.join(settings.MEDIA_ROOT, 'json_files', filename)
+
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            data = json.loads(content)
+            pretty_content = json.dumps(data, ensure_ascii=False, indent=2)
+
+            return render(request, 'books/view_json.html', {
+                'filename': filename,
+                'content': pretty_content,
+                'book_count': len(data) if isinstance(data, list) else 1
+            })
+        except:
+            messages.error(request, 'Ошибка чтения файла!')
+    else:
+        messages.error(request, 'Файл не найден!')
+
+    return redirect('home')
