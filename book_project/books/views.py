@@ -27,14 +27,14 @@ def home(request):
         messages.success(request, f'Удалено {book_count} книг и {file_count} файлов')
         return redirect('home')
 
-
     # Добавление книги
     if request.method == 'POST' and 'title' in request.POST:
         title = request.POST['title']
         author = request.POST['author']
         year = request.POST['year']
-        if title and author and year:
-            Book.objects.create(title=title, author=author, year=year)
+        janr = request.POST['janr']
+        if title and author and year and janr:
+            Book.objects.create(title=title, author=author, year=year, janr=janr)
             messages.success(request, 'Книга добавлена')
         return redirect('home')
 
@@ -79,11 +79,12 @@ def home(request):
             if isinstance(data, list):
                 imported = 0
                 for item in data:
-                    if all(k in item for k in ['title', 'author', 'year']):
+                    if all(k in item for k in ['title', 'author', 'year', 'janr']):
                         Book.objects.get_or_create(
                             title=item['title'],
                             author=item['author'],
-                            year=item['year']
+                            year=item['year'],
+                            janr=item['janr']
                         )
                         imported += 1
                 messages.success(request, f'Импортировано {imported} книг')
@@ -107,7 +108,7 @@ def home(request):
                 filepath = os.path.join(files_dir, f)
                 json_files.append({
                     'name': f,
-                    'size': os.path.getsize(filepath),  # Чтение информации о файле
+                    'size': os.path.getsize(filepath),
                 })
 
     return render(request, 'books/home.html', {
